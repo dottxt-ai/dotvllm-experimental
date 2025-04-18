@@ -11,12 +11,26 @@ client = openai.OpenAI(
     api_key="dummy"
 )
 
+# # Send a completion request
+# response = client.completions.create(
+#     model="gpt2",  # Use the model name provided to DotLLM
+#     prompt="What is the capital of France?",
+#     max_tokens=100,
+#     temperature=0.7
+# )
+
+# # Print the response
+# print(response.choices[0].text)
+
 # Send a completion request
 response = client.completions.create(
     model="gpt2",  # Use the model name provided to DotLLM
     prompt="What is the capital of France?",
     max_tokens=100,
-    temperature=0.7
+    temperature=0.7,
+    extra_body = {
+        "guided_json": '{"type": "string"}'
+    }
 )
 
 # Print the response

@@ -1,14 +1,23 @@
 """DotLLM Engine implementation."""
 
+import copy
 import os
 import logging
 import vllm.envs as envs
-from typing import Dict, Optional, Type, Any
+from typing import Dict, Optional, Type, Any, Union, Mapping
 from vllm.engine.async_llm_engine import AsyncLLMEngine, _AsyncLLMEngine
 from vllm.config import VllmConfig
 from vllm.engine.metrics_types import StatLoggerBase
 from vllm.usage.usage_lib import UsageContext
 from vllm.executor.executor_base import ExecutorBase
+from vllm.sampling_params import SamplingParams
+from vllm.pooling_params import PoolingParams
+from vllm.prompt_adapter.request import PromptAdapterRequest
+from vllm.lora.request import LoRARequest
+from vllm.inputs import PromptType
+
+
+from dotllm.logits_processor import GuidedLogitsProcessor
 
 
 logger = logging.getLogger("dotllm.engine")
@@ -19,14 +28,78 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
     
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        # Add custom initialization here if needed
+
+    async def add_request_async(
+        self,
+        request_id: str,
+        prompt: Optional[PromptType] = None,
+        params: Optional[Union[SamplingParams, PoolingParams]] = None,
+        arrival_time: Optional[float] = None,
+        lora_request: Optional[LoRARequest] = None,
+        trace_headers: Optional[Mapping[str, str]] = None,
+        prompt_adapter_request: Optional[PromptAdapterRequest] = None,
+        priority: int = 0,
+        *,
+        inputs: Optional[PromptType] = None,  # DEPRECATED
+    ) -> None:
+        """Add a request to the engine with support for guided_decoding.
+
+        This method extends the parent class method to check for the guided_decoding
+        attribute in params and apply custom logits processing if present.
+
+        Args:
+            request_id: The unique ID of the request.
+            prompt: The prompt string.
+            params: The sampling parameters.
+            prompt_token_ids: The token IDs of the prompt. If None, the prompt will
+                be tokenized.
+            arrival_time: The arrival time of the request.
+            **kwargs: Additional arguments.
+        """
+        preprocessed_inputs = await self.input_preprocessor.preprocess_async(
+            prompt,
+            lora_request=lora_request,
+            prompt_adapter_request=prompt_adapter_request,
+        )
+        processed_inputs = self.input_processor(preprocessed_inputs)
+
+        # Check if guided_decoding is present in params
+        if isinstance(params, SamplingParams) and params.guided_decoding is not None:
+            logger.info(f"Using guided decoding for request {request_id}")
+
+            # Defensively copy sampling params since guided decoding logits
+            # processors can have different state for each request
+            params = copy.copy(params)
+            guided_decoding = params.guided_decoding
+
+            processor = GuidedLogitsProcessor()
+
+            if processor:
+                if params.logits_processors is None:
+                    params.logits_processors = []
+                params.logits_processors.append(processor)
+
+            # Unset guided decoding params after constructing the lp from them
+            params.guided_decoding = None
+
+
+        self._add_processed_request(
+            request_id=request_id,
+            processed_inputs=processed_inputs,
+            params=params,
+            arrival_time=arrival_time,
+            lora_request=lora_request,
+            prompt_adapter_request=prompt_adapter_request,
+            trace_headers=trace_headers,
+            priority=priority,
+        )
 
 
 class DotEngine(AsyncLLMEngine):
     """Custom AsyncLLMEngine for DotLLM.
     
     This class extends vLLM's AsyncLLMEngine to support custom behavior
-    for the DotLLM CLI and API server.
+    for the DotLLM CLI and API server, including guided logits processing.
     """
     
     _engine_class: Type[_AsyncLLMEngine] = _DotAsyncLLMEngine

@@ -1,10 +1,30 @@
 """DotLLM custom logits processors."""
 
-from typing import List
-import torch
 import logging
+from typing import List
+
+import torch
+from transformers import PreTrainedTokenizerBase
+
+from vllm.sampling_params import GuidedDecodingParams
+
 
 logger = logging.getLogger("dotllm.logits_processor")
+
+
+def get_logits_processor(
+    guided_decoding_params: GuidedDecodingParams,
+    tokenizer: PreTrainedTokenizerBase,
+):
+    if guided_decoding_params.json:
+        json = guided_decoding_params.json
+        return GuidedLogitsProcessor()
+    elif guided_decoding_params.regex:
+        return GuidedLogitsProcessor()
+    elif guided_decoding_params.grammar:
+        return GuidedLogitsProcessor()
+    else:
+        raise ValueError(f"Unknown guided decoding mode {mode}")
 
 
 class GuidedLogitsProcessor:

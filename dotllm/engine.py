@@ -17,7 +17,7 @@ from vllm.lora.request import LoRARequest
 from vllm.inputs import PromptType
 
 
-from dotllm.logits_processor import GuidedLogitsProcessor
+from dotllm.logits_processor import GuidedLogitsProcessor, get_logits_processor
 
 
 logger = logging.getLogger("dotllm.engine")
@@ -56,6 +56,10 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
             arrival_time: The arrival time of the request.
             **kwargs: Additional arguments.
         """
+        if self.tokenizer is not None:
+            tokenizer = await self.get_tokenizer_async(lora_request)
+            self._validate_token_prompt(prompt, tokenizer=tokenizer)
+
         preprocessed_inputs = await self.input_preprocessor.preprocess_async(
             prompt,
             lora_request=lora_request,
@@ -71,8 +75,7 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
             # processors can have different state for each request
             params = copy.copy(params)
             guided_decoding = params.guided_decoding
-
-            processor = GuidedLogitsProcessor()
+            processor = get_logits_processor(guided_decoding, tokenizer)
 
             if processor:
                 if params.logits_processors is None:

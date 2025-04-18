@@ -13,6 +13,7 @@ def main():
     """Main entry point for the DotLLM CLI."""
     # For now, just pass through all args to the API server
     from dotllm.api_server import cli_main
+
     cli_main()
 
 

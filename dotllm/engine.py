@@ -17,7 +17,7 @@ from vllm.lora.request import LoRARequest
 from vllm.inputs import PromptType
 
 
-from dotllm.logits_processor import GuidedLogitsProcessor, get_logits_processor
+from dotllm.logits_processor import get_logits_processor
 
 
 logger = logging.getLogger("dotllm.engine")
@@ -25,7 +25,7 @@ logger = logging.getLogger("dotllm.engine")
 
 class _DotAsyncLLMEngine(_AsyncLLMEngine):
     """Extended AsyncLLMEngine with custom behavior for DotLLM."""
-    
+
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
 
@@ -85,7 +85,6 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
             # Unset guided decoding params after constructing the lp from them
             params.guided_decoding = None
 
-
         self._add_processed_request(
             request_id=request_id,
             processed_inputs=processed_inputs,
@@ -100,18 +99,18 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
 
 class DotEngine(AsyncLLMEngine):
     """Custom AsyncLLMEngine for DotLLM.
-    
+
     This class extends vLLM's AsyncLLMEngine to support custom behavior
     for the DotLLM CLI and API server, including guided logits processing.
     """
-    
+
     _engine_class: Type[_AsyncLLMEngine] = _DotAsyncLLMEngine
-    
+
     @classmethod
     def _get_executor_cls(cls, engine_config: VllmConfig) -> Type[ExecutorBase]:
         """Get the executor class based on the engine configuration."""
         return AsyncLLMEngine._get_executor_cls(engine_config)
-    
+
     @classmethod
     def from_vllm_config(
         cls,
@@ -123,14 +122,12 @@ class DotEngine(AsyncLLMEngine):
         disable_log_stats: bool = False,
     ) -> "DotEngine":
         """Create a DotEngine from VllmConfig."""
-        
+
         # Force V0 mode by setting environment variable directly
         # This affects all imported modules that check this env var
         os.environ["VLLM_USE_V1"] = "0"
         envs.VLLM_USE_V1 = False
-        
-        logger.info("DotEngine: Using vLLM V0 engine for better compatibility")
-        
+
         try:
             engine = cls(
                 vllm_config=vllm_config,

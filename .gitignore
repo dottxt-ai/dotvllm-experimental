@@ -20,6 +20,7 @@ var/
 dotllm.egg-info/
 .installed.cfg
 *.egg
+*.whl
 
 # Virtual environments
 .env

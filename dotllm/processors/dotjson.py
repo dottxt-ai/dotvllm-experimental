@@ -1,18 +1,15 @@
+import logging
 
 from dotregex import Vocabulary, Index, Guide
-from transformers import PreTrainedTokenizerBase
 
-from dotllm.processors.base import BaseLogitsProcessor
+logger = logging.getLogger("dotllm.processors.dotjson")
 
 
-class DotJsonLogitsProcessor(BaseLogitsProcessor):
-    def __init__(self, tokenizer: PreTrainedTokenizerBase, json_schema: str) -> None:
-        """Initialize the Guide."""
-        self.json_schema = json_schema
-        self.tokenizer = tokenizer
-        vocabulary = Vocabulary.from_pretrained(tokenizer.name_or_path)
-        index = Index.from_schema(json_schema, vocabulary)
-        self.guide = Guide(index)
+def compile_json(model_name: str, json_schema: str):
+    logger.info(f"Compiling JSON index for schema: {json_schema[:50]}...")
+    vocabulary = Vocabulary.from_pretrained(model_name)
+    index = Index.from_schema(json_schema, vocabulary)
+    guide = Guide(index)
+    logger.info("JSON index compilation complete")
 
-    def clone(self):
-        return DotJsonLogitsProcessor(self.tokenizer, self.json_schema)
+    return guide

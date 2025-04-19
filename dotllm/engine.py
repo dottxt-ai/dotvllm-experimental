@@ -18,6 +18,7 @@ from vllm.inputs import PromptType
 
 
 from dotllm.logits_processor import get_logits_processor
+from dotllm.compilation_manager import CompilationManager
 
 
 logger = logging.getLogger("dotllm.engine")
@@ -28,6 +29,7 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
+        self.compilation_manager = CompilationManager()
 
     async def add_request_async(
         self,
@@ -75,7 +77,9 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
             # processors can have different state for each request
             params = copy.copy(params)
             guided_decoding = params.guided_decoding
-            processor = get_logits_processor(guided_decoding, tokenizer)
+            processor = get_logits_processor(
+                guided_decoding, tokenizer, self.compilation_manager
+            )
 
             if processor:
                 if params.logits_processors is None:

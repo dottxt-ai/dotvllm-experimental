@@ -74,7 +74,7 @@ response = client.completions.create(
     max_tokens=100,
     temperature=0.7,
     extra_body={
-        "guided_json": '{"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "number"}}}'
+        "guided_json": '{"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "number"}}, "required":["name", "age"]}'
     },
 )
 

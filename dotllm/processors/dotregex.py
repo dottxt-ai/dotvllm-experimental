@@ -1,16 +1,15 @@
+import logging
 
 from dotregex import Vocabulary, Index, Guide
-from transformers import PreTrainedTokenizerBase
-from dotllm.processors.base import BaseLogitsProcessor
+
+logger = logging.getLogger("dotllm.processors.dotregex")
 
 
-class DotRegexLogitsProcessor(BaseLogitsProcessor):
-    def __init__(self, tokenizer: PreTrainedTokenizerBase, regex: str) -> None:
-        self.regex = regex
-        self.tokenizer = tokenizer
-        vocabulary = Vocabulary.from_pretrained(tokenizer.name_or_path)
-        index = Index(regex, vocabulary)
-        self.guide = Guide(index)
+def compile_regex(model_name: str, regex_str: str):
+    logger.info(f"Compiling regex index for pattern: {regex_str[:50]}...")
+    vocabulary = Vocabulary.from_pretrained(model_name)
+    index = Index(regex_str, vocabulary)
+    guide = Guide(index)
+    logger.info("Regex index compilation complete")
 
-    def clone(self):
-        return DotRegexLogitsProcessor(self.tokenizer, self.regex)
+    return guide

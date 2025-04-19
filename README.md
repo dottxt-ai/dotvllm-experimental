@@ -2,6 +2,30 @@
 
 DotLLM is a vLLM wrapper that serves an OpenAI-compatible API using custom logit processors.
 
+## Optimizations
+
+We can implement the following optimizations:
+
+- [ ] Use a `ProcessPoolExecutor` instead of a `ThreadPoolExecutor` to compile indexes in parallel. To do this we'd need to serialize/deserialize the index, which might add a performance penalty.
+- [ ] Run the compilation during the KV-cache computation and only schedule the request for generation once compilation is done. This way we're not blocking the generation and reduce the throughput.
+- [ ] Compute the mask and load it on GPU during the forward pass.
+
+We can also:
+- [ ] Add a simple `Cache` implementation
+- [ ] Implement a `CompilationManager` that uses a different instance to compile the index, and fetch it from remote storage (with local cache)
+- [ ] Give selective multiplication a try.
+- [ ] Modify the implementation so coalescence can be easily added.
+
+We also need to add a benchmark script with multiple schemas and concurrent requests so we can make sure the optimizations are actually making a difference, and quantify them.
+
+## Experiments
+
+Measuring the maximum throughput measured with `bench.py` with GPT2 on my machine:
+
+- 62f8604: 3.20 req/s
+- efd3441: 4.40 req/s (+37.5%)
+
+
 ## Installation
 
 ```bash

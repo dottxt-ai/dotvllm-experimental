@@ -79,4 +79,5 @@ response = client.completions.create(
 )
 
 # Print the response
+breakpoint()
 print(response.choices[0].text)

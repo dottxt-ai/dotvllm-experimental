@@ -9,7 +9,10 @@ def compile_json(model_name: str, json_schema: str):
     logger.info(f"Compiling JSON index for schema: {json_schema[:50]}...")
     vocabulary = Vocabulary.from_pretrained(model_name)
     index = Index.from_schema(json_schema, vocabulary)
-    guide = Guide(index)
     logger.info("JSON index compilation complete")
+    return index.serialize()
 
-    return guide
+
+def build_json_guide(serialized_index):
+    index = Index.deserialize(serialized_index)
+    return Guide(index)

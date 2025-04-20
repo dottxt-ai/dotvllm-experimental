@@ -24,6 +24,10 @@ def compile_grammar(model_name: str, grammar: str):
     parser = PartialParser.from_lark(lp)
     vocabulary = Vocabulary.from_pretrained(model_name)
     index = CFGVocabularyIndex.build(parser, vocabulary)
-    guide = Guide(index)
     logger.info("Grammar index compilation complete")
-    return guide
+    return index.serialize()
+
+
+def build_grammar_guide(serialized_index):
+    index = CFGVocabularyIndex.deserialize(serialized_index)
+    return Guide(index)

@@ -9,9 +9,9 @@ import torch
 
 from vllm.sampling_params import GuidedDecodingParams
 
-from dotllm.processors.dotregex import compile_regex
-from dotllm.processors.dotgrammar import compile_grammar
-from dotllm.processors.dotjson import compile_json
+from dotllm.processors.dotregex import compile_regex, build_regex_guide
+from dotllm.processors.dotgrammar import compile_grammar, build_grammar_guide
+from dotllm.processors.dotjson import compile_json, build_json_guide
 from dotllm.compilation_manager import CompilationManager
 
 
@@ -43,22 +43,25 @@ def get_logits_processor(
         compilation_key = compilation_manager.submit(
             compile_json, model_name, guided_decoding_params.json
         )
+        build_guide = build_json_guide
     elif guided_decoding_params.regex:
         compilation_key = compilation_manager.submit(
             compile_regex, model_name, guided_decoding_params.regex
         )
+        build_guide = build_regex_guide
     elif guided_decoding_params.grammar:
         compilation_key = compilation_manager.submit(
             compile_grammar, model_name, guided_decoding_params.grammar
         )
+        build_guide = build_grammar_guide
     else:
         raise ValueError(f"Unknown guided decoding mode {guided_decoding_params}")
 
-    return LogitsProcessor(compilation_key, compilation_manager)
+    return LogitsProcessor(compilation_key, compilation_manager, build_guide)
 
 
 class LogitsProcessor:
-    def __init__(self, compilation_key: str, compilation_manager):
+    def __init__(self, compilation_key: str, compilation_manager, build_guide):
         """Initialize the base logits processor.
 
         Args:
@@ -66,6 +69,8 @@ class LogitsProcessor:
         """
         self.compilation_key = compilation_key
         self.compilation_manager = compilation_manager
+        self.build_guide = build_guide
+        self.guide = None
 
     def __call__(self, input_ids: list[int], logits: torch.Tensor) -> torch.Tensor:
         """Mask the allowed tokens.
@@ -80,16 +85,21 @@ class LogitsProcessor:
         Returns:
             The processed logits.
         """
-        guide = self.compilation_manager.get_guide(self.compilation_key)
-        if guide is None:
-            return logits
+
+        # During the first run we retrieve the compiled index from the compilation
+        # manager (and wait for it to be available) and build the guide.
+        if self.guide is None:
+            serialized_index = self.compilation_manager.get_index(self.compilation_key)
+            if serialized_index is None:
+                return logits
+            self.guide = self.build_guide(serialized_index)
 
         # Now use the guide to process logits
         if len(input_ids) == 0:
-            allowed_tokens = guide.get_start_tokens()
+            allowed_tokens = self.guide.get_start_tokens()
         else:
             last_token = input_ids[-1]
-            allowed_tokens = guide.read_next_token(last_token)
+            allowed_tokens = self.guide.read_next_token(last_token)
 
         mask = torch.full((logits.shape[-1],), -torch.inf, device=logits.device)
         allowed_tokens = np.array(allowed_tokens, dtype=np.int64)
@@ -98,4 +108,6 @@ class LogitsProcessor:
         return logits.add_(mask)
 
     def __clone__(self):
-        return LogitsProcessor(self.compilation_key, self.compilation_manager)
+        return LogitsProcessor(
+            self.compilation_key, self.compilation_manager, self.build_guide
+        )

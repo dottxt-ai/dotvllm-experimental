@@ -7,7 +7,7 @@ DotLLM is a vLLM wrapper that serves an OpenAI-compatible API using custom logit
 Here a few optimization ideas, that shouldnt be too hard to
 implement now that we use a custom `AsyncEngine`:
 
-- [x] Use a `ProcessPoolExecutor` instead of a `ThreadPoolExecutor` to compile indexes in parallel. To do this, however, we need to serialize/deserialize the index, which adds  a performance penalty.
+- Use a `ProcessPoolExecutor` instead of a `ThreadPoolExecutor` to compile indexes in parallel. To do this, however, we need to serialize/deserialize the index, which adds  a performance penalty.
 - Run the compilation during the KV-cache computation and only schedule the request for generation once compilation is done. This way we're not blocking the generation and reduce the throughput.
 - Compute the mask and load it on GPU during the forward pass.
 

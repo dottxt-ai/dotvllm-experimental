@@ -88,6 +88,9 @@ class LogitsProcessor:
 
         # During the first run we retrieve the compiled index from the compilation
         # manager (and wait for it to be available) and build the guide.
+        #
+        # Ideally we would use a custom scheduler that does not schedule sequences
+        # for generation until the index is compiled to avvoid blocking.
         if self.guide is None:
             serialized_index = self.compilation_manager.get_index(self.compilation_key)
             if serialized_index is None:
@@ -95,6 +98,10 @@ class LogitsProcessor:
             self.guide = self.build_guide(serialized_index)
 
         # Now use the guide to process logits
+        #
+        # This is a very low-performance implementation. This should be replaced, and
+        # then ideally move this computation to happen behind the forward pass, which
+        # may require modifying `AsyncEngine` or subclassing the sampler.
         if len(input_ids) == 0:
             allowed_tokens = self.guide.get_start_tokens()
         else:

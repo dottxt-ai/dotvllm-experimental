@@ -1,17 +1,17 @@
 import logging
 
-from dotcfg import (
-    Vocabulary,
-    Guide,
-    PartialLark,
-    CFGVocabularyIndex,
-    PartialParser,
-)
 
 logger = logging.getLogger("dotllm.processors.dotgrammar")
 
 
 def compile_grammar(model_name: str, grammar: str):
+    from dotcfg import (
+        Vocabulary,
+        PartialLark,
+        CFGVocabularyIndex,
+        PartialParser,
+    )
+
     logger.info("Compiling grammar index...")
     lp = PartialLark(
         grammar,
@@ -29,5 +29,7 @@ def compile_grammar(model_name: str, grammar: str):
 
 
 def build_grammar_guide(serialized_index):
+    from dotcfg import Guide, CFGVocabularyIndex
+
     index = CFGVocabularyIndex.deserialize(serialized_index)
     return Guide(index)

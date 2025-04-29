@@ -22,14 +22,13 @@ class CompilationManager:
     serialize/deserialize the index, which might incur a performance penalty:
     https://github.com/dottxt-ai/dotregex/issues/335.
 
+    A production version would include a better caching mechanism, the cache
+    manager would be attached to this class.
+
     """
 
     def __init__(self):
-        """Initialize the CompilationManager.
-
-        Args:
-            max_workers: Maximum number of worker processes in the process pool.
-        """
+        """Initialize the CompilationManager."""
         self.process_pool = ProcessPoolExecutor()
         self._indexes = {}
         self._futures = {}
@@ -53,6 +52,14 @@ class CompilationManager:
         return key
 
     def get_index(self, key: str):
+        """Get the index corresponding to `key`
+
+        Args:
+            key: The index's key
+
+        Returns:
+            A serialized index
+        """
         if key in self._indexes:
             return self._indexes[key]
 

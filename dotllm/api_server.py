@@ -27,15 +27,18 @@ logging.basicConfig(
 logger = logging.getLogger("dotllm.api_server")
 
 # Force V0 mode by setting environment variable directly
-# Without this vLLM will try to instantiate a `LLMEngine`
+# Without this vLLM will try to instantiate a V1 `LLMEngine`
 os.environ["VLLM_USE_V1"] = "0"
 
 
 async def run_dot_server(args) -> None:
     """Run the DotLLM API server with a custom engine.
 
-    This function is based on vLLM's run_server function but uses
+    This function is based on vLLM's `run_server` function but uses
     our custom DotEngine implementation.
+
+    This is the only function that we had to copy almost verbatim to
+    be able to write a minimal wrapper. I can't see a way around it.
 
     """
     logger.info("DotLLM API server starting...")
@@ -54,14 +57,11 @@ async def run_dot_server(args) -> None:
     # Create engine args and then modify to use our custom engine
     engine_args = AsyncEngineArgs.from_cli_args(args)
 
-    # We need to use the proper enum value for usage_context
     from vllm.usage.usage_lib import UsageContext
 
     vllm_config = engine_args.create_engine_config(
         usage_context=UsageContext.OPENAI_API_SERVER
     )
-
-    # Use our custom DotEngine instead of AsyncLLMEngine
     engine_client: EngineClient = DotEngine.from_vllm_config(
         vllm_config=vllm_config,
         disable_log_requests=args.disable_log_requests,
@@ -114,29 +114,18 @@ async def run_dot_server(args) -> None:
         sock.close()
 
 
-def make_parser() -> FlexibleArgumentParser:
-    """Create argument parser for DotLLM CLI.
-
-    This uses vLLM's argument parser with any additions we need.
-    """
-    from vllm.entrypoints.openai.cli_args import make_arg_parser
-
-    parser = FlexibleArgumentParser(description="DotLLM OpenAI-Compatible API server.")
-    parser = make_arg_parser(parser)
-
-    return parser
-
-
 def cli_main():
     """CLI entrypoint for the DotLLM API server."""
     from vllm.entrypoints.openai.cli_args import validate_parsed_serve_args
     from vllm.entrypoints.utils import cli_env_setup
+    from vllm.entrypoints.openai.cli_args import make_arg_parser
 
     # Set up CLI environment
     cli_env_setup()
 
     # Parse and validate arguments
-    parser = make_parser()
+    parser = FlexibleArgumentParser(description="DotLLM OpenAI-Compatible API server.")
+    parser = make_arg_parser(parser)
     args = parser.parse_args()
     validate_parsed_serve_args(args)
 

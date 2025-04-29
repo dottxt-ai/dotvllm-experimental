@@ -44,9 +44,9 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
         *,
         inputs: Optional[PromptType] = None,  # DEPRECATED
     ) -> None:
-        """Add a request to the engine with support for guided_decoding.
+        """Add a request to the engine with support for structured generation.
 
-        This method extends the parent class method to check for the guided_decoding
+        This method extends the parent class method to check for the `guided_decoding`
         attribute in params and apply custom logits processing if present.
 
         Args:
@@ -104,8 +104,10 @@ class _DotAsyncLLMEngine(_AsyncLLMEngine):
 class DotEngine(AsyncLLMEngine):
     """Custom AsyncLLMEngine for DotLLM.
 
-    This class extends vLLM's AsyncLLMEngine to support custom behavior
-    for the DotLLM CLI and API server, including guided logits processing.
+    This class extends vLLM's `AsyncLLMEngine` to support custom behavior for
+    the DotLLM CLI and API server, including using our proprietary libraries for
+    structured generation.
+
     """
 
     _engine_class: Type[_AsyncLLMEngine] = _DotAsyncLLMEngine

@@ -21,7 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 dependencies = [
-    "vllm",
+    "vllm<=0.8.4",
     "uvloop>=0.16.0",
     "fastapi>=0.95.0",
 ]

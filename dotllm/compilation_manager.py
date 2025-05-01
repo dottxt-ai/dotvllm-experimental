@@ -22,8 +22,8 @@ class CompilationManager:
     serialize/deserialize the index, which might incur a performance penalty:
     https://github.com/dottxt-ai/dotregex/issues/335.
 
-    A production version would include a better caching mechanism, the cache
-    manager would be attached to this class.
+    A production version would include a `CachingManager` class that handles
+    caching better than what I did here.
 
     """
 
@@ -45,6 +45,7 @@ class CompilationManager:
         Returns:
             A key representing the compilation task.
         """
+        logger.info(f"Compiling schema: {schema[:50]}")
         key = make_key(model_name, schema)
         if key not in self._futures and key not in self._indexes:
             self._futures[key] = self.process_pool.submit(func, model_name, schema)
@@ -64,15 +65,12 @@ class CompilationManager:
             return self._indexes[key]
 
         try:
-            if key not in self._futures:
-                logger.error(f"No future found for key {key}")
-                return None
-
             serialized_index = self._futures[key].result()
 
             self._indexes[key] = serialized_index
             del self._futures[key]
+
             return serialized_index
         except Exception as e:
             logger.error(f"Guide compilation failed: {e}")
-            return None
+            raise e

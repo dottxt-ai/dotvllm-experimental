@@ -4,25 +4,34 @@ DotLLM is a vLLM wrapper that serves an OpenAI-compatible API using custom logit
 
 ⚠️ This is an experimental project. Not for production use. ⚠️
 
+## Architecture
+
+The idea is to be able to replace the guided decoding implementation in vLLM while (1) having a CLI that is a drop-in replacement for `vllm` (2) Spawning the same OpenAI-compatible API as vLLM does. All while adding a minimal amount of code.
+
+To replace the guided decoding implementation we subclass `AsyncLLMEngine` and override `_AsyncLLMEngine.add_request_async`. The subclass instantiates a `CompilationManager` class which uses a `ProcessPoolExecutor` to compile indexes and caches them. The `LogitsProcessor` class is in charge of holding the guide in memory and computing the allowed tokens at each step.
+
+- `api_engine.py`. Most of the code in this module is copied from vLLM, we modified one line to be able to initialize the server with our subclass of `AsyncLLMEngine`.
+- `engine.py`. Contains the `AsyncLLMEngine` and `_AsyncLLMEngine` subclasses. We only need a minimal change in `add_request_async` to replace vLLM's guided decoding with our custom implementation.
+- `logits_processors.py` dispatches the structure definition to the different backend. Contains the `LogitsProcessor` implementation.
+- `dotregex.py`, `dotgrammar.py`, `dotjson.py` contain the code necessary to compile and serialize an index, and build a guide from a serialized index.
+- `compilation_manager.py` contains a `CompilationManager` class that uses a `ProcesssPoolExecutor` to compile indexes in parallel, and caches them.
+
+
+## The sharp bits
+
+- We are forcing vLLM to use the V0 code paths. V1 has a different `LLMEngine` implementation.
+- We use a `ProcessPool` instead of a `ThreadPool` to compile the indexes in parallel. As a result we need to serialize/deserialize the indexes, which incurs [a performance penalty](https://github.com/dottxt-ai/dotregex/issues/335).
+- The server shuts down whenever the generation fails because of an error with the index. This is on purpose, exceptions that are raised in a task cannot be caught and propagated downstream and returned as an error. We *want* to get the error message as this corresponds to a bug in our structured generation algorithm.
+- The server shuts down whenever the compilation fails, because unlike vLLM we add the request even if the index hasn't compiled yet. This can be avoided by checking the validity of the schema before queueing it for compilation.
+
+
 ## Optimizations
 
-Here a few optimization ideas, that shouldn't be too hard to implement now that
-we use a custom `AsyncEngine`:
+Here a few optimization ideas, that we could implement now that we use a subclass of `AsyncLLMEngine`:
 
 - Run the compilation during the KV-cache computation and only schedule the request for generation once compilation is done. This way we're not blocking the generation and reduce the throughput.
 - Compute the mask and load it on GPU during the forward pass.
 
-## Experiments
-
-Measuring the maximum throughput measured with `bench.py` with GPT2 on my machine:
-
-- 62f8604: 3.20 req/s
-- efd3441: 4.40 req/s (+37.5%)
-
-## The sharp bits
-
-- We use a `ProcessPool` instead of a `ThreadPool` to compile the indexes in parallel. As a result we need to serialize/deserialize the indexes, which incurs [a performance penalty](https://github.com/dottxt-ai/dotregex/issues/335).
-- The server shuts down whenever the generation fails because of an error with structured generation. This should be easy to fix but I didn't get around to do it.
 
 ## Installation
 

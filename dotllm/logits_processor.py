@@ -36,6 +36,7 @@ def get_logits_processor(
 
     Raises:
         ValueError: If the guided decoding mode is unknown.
+
     """
     model_name = tokenizer.name_or_path
 
@@ -66,6 +67,7 @@ class LogitsProcessor:
 
         Args:
             guide: Pre-compiled guide instance. If None, compilation will be needed.
+
         """
         self.compilation_key = compilation_key
         self.compilation_manager = compilation_manager
@@ -84,13 +86,15 @@ class LogitsProcessor:
 
         Returns:
             The processed logits.
-        """
 
+        """
         # During the first run we retrieve the compiled index from the compilation
         # manager (and wait for it to be available) and build the guide.
         #
         # Ideally we would use a custom scheduler that does not schedule sequences
-        # for generation until the index is compiled to avvoid blocking.
+        # for generation until the index is compiled. This would avoid reducing
+        # the throughput in cases where some schemas take a longer time to compile
+        # than others.
         if self.guide is None:
             serialized_index = self.compilation_manager.get_index(self.compilation_key)
             if serialized_index is None:
@@ -101,7 +105,7 @@ class LogitsProcessor:
         #
         # This is a very low-performance implementation. This should be replaced, and
         # then ideally move this computation to happen behind the forward pass, which
-        # may require modifying `AsyncEngine` or subclassing the sampler.
+        # may require modifying `DotLLMAsyncEngine` or subclassing the sampler.
         if len(input_ids) == 0:
             allowed_tokens = self.guide.get_start_tokens()
         else:

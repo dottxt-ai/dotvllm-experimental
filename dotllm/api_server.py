@@ -13,7 +13,10 @@ from vllm.entrypoints.openai.api_server import (
     init_app_state,
     set_ulimit,
 )
+from vllm.entrypoints.openai.tool_parsers import ToolParserManager
+from vllm.reasoning import ReasoningParserManager
 from vllm.utils import FlexibleArgumentParser, is_valid_ipv6_address
+
 
 from dotllm.engine import DotEngine
 
@@ -40,9 +43,31 @@ async def run_dot_server(args) -> None:
     This is the only function that we had to copy almost verbatim to
     be able to write a minimal wrapper. I can't see a way around it.
 
+    Code copied from vLLM:
+    https://github.com/vllm-project/vllm/blob/9b70e2b4c147ea650f9b943e6aecd977377fbbfd/vllm/entrypoints/openai/api_server.py#L1041
+
+    We only changed the definition of `engine_client`
+
     """
     logger.info("DotLLM API server starting...")
     logger.info("args: %s", args)
+
+    if args.tool_parser_plugin and len(args.tool_parser_plugin) > 3:
+        ToolParserManager.import_tool_parser(args.tool_parser_plugin)
+
+    valid_tool_parses = ToolParserManager.tool_parsers.keys()
+    if args.enable_auto_tool_choice and args.tool_call_parser not in valid_tool_parses:
+        raise KeyError(
+            f"invalid tool call parser: {args.tool_call_parser} "
+            f"(chose from {{ {','.join(valid_tool_parses)} }})"
+        )
+
+    valid_reasoning_parses = ReasoningParserManager.reasoning_parsers.keys()
+    if args.reasoning_parser and args.reasoning_parser not in valid_reasoning_parses:
+        raise KeyError(
+            f"invalid reasoning parser: {args.reasoning_parser} "
+            f"(chose from {{ {','.join(valid_reasoning_parses)} }})"
+        )
 
     # Set up socket binding like vLLM
     sock_addr = (args.host or "", args.port)
@@ -55,6 +80,7 @@ async def run_dot_server(args) -> None:
     app = build_app(args)
 
     # Create engine args and then modify to use our custom engine
+    # !! This is the only line from the original code that was modified.
     engine_args = AsyncEngineArgs.from_cli_args(args)
 
     from vllm.usage.usage_lib import UsageContext
@@ -115,7 +141,12 @@ async def run_dot_server(args) -> None:
 
 
 def cli_main():
-    """CLI entrypoint for the DotLLM API server."""
+    """CLI entrypoint for the DotLLM API server.
+
+    Code copied from vLLM:
+    https://github.com/vllm-project/vllm/blob/9b70e2b4c147ea650f9b943e6aecd977377fbbfd/vllm/entrypoints/openai/api_server.py#L1118
+
+    """
     from vllm.entrypoints.openai.cli_args import validate_parsed_serve_args
     from vllm.entrypoints.utils import cli_env_setup
     from vllm.entrypoints.openai.cli_args import make_arg_parser

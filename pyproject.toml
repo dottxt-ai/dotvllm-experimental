@@ -3,12 +3,12 @@ requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dotllm"
+name = "dotvllm"
 version = "0.1.0"
 description = "OpenAI-compatible API server based on vLLM with custom engine"
 readme = "README.md"
 authors = [
-    {name = "DotLLM Team"}
+    {name = ".txt"}
 ]
 requires-python = ">=3.10"
 classifiers = [
@@ -27,11 +27,10 @@ dependencies = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/yourname/dotllm"
-"Bug Tracker" = "https://github.com/yourname/dotllm/issues"
+"Homepage" = "https://github.com/dottxt-ai/dotvllm-experimental"
 
 [project.scripts]
-dotllm = "dotllm.cli:main"
+dotvllm = "dotvllm.cli:main"
 
 [tool.setuptools]
-packages = ["dotllm"]
+packages = ["dotvllm"]

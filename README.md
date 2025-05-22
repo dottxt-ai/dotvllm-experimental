@@ -1,6 +1,6 @@
-# DotLLM
+# DotvLLM
 
-DotLLM is a vLLM wrapper that serves an OpenAI-compatible API using custom logit processors.
+DotvLLM is a vLLM wrapper that serves an OpenAI-compatible API using custom logit processors.
 
 ⚠️ This is an experimental project. Not for production use. ⚠️
 
@@ -44,11 +44,11 @@ Which will also install vLLM.
 
 ## Usage
 
-`dotllm` wraps vLLM, and it exposes the same OpenAI API. To run a server:
+`dovtllm` wraps vLLM, and it exposes the same OpenAI API. To run a server:
 
 ```bash
 # Start the API server with all vLLM OpenAI serve options
-dotllm --model <model_id_or_path> --host 0.0.0.0 --port 8000
+dotvllm --model <model_id_or_path> --host 0.0.0.0 --port 8000
 
 # Use with OpenAI client
 OPENAI_API_BASE=http://localhost:8000 OPENAI_API_KEY=dummy python -c "import openai; print(openai.ChatCompletion.create(model='mistralai/Mistral-7B-Instruct-v0.2', messages=[{'role': 'user', 'content': 'Hello!'}]))"
@@ -59,5 +59,5 @@ OPENAI_API_BASE=http://localhost:8000 OPENAI_API_KEY=dummy python -c "import ope
 DotLLM inherits all the CLI options from vLLM's OpenAI API server. You can use the same parameters:
 
 ```bash
-dotllm --help
+dotvllm --help
 ```
